@@ -175,9 +175,10 @@ int main(){
                 camImage=xpcf::utils::make_shared<Image>(r_imageData,calib.width,calib.height,SolAR::Image::LAYOUT_BGR,SolAR::Image::INTERLEAVED,SolAR::Image::TYPE_8U);
 
                 PIPELINEMANAGER_RETURNCODE returnCode = pipeline.udpate(pose);
-                if(returnCode==PIPELINEMANAGER_RETURNCODE::_ERROR)
+                if(returnCode==PIPELINEMANAGER_RETURNCODE::_ERROR){
+                    pipeline.stop();
                     break;
-
+                }
                 if ((returnCode & PIPELINEMANAGER_RETURNCODE::_NEW_POSE))
                 {
 //                    LOG_INFO("Camera Pose translation ({}, {}, {})", pose.translation(0), pose.translation(1), pose.translation(2));
