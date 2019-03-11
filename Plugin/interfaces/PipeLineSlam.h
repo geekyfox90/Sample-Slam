@@ -28,6 +28,7 @@
 #include "api/solver/map/IMapFilter.h"
 #include "api/solver/pose/I2D3DCorrespondencesFinder.h"
 #include "api/solver/pose/I3DTransformFinderFrom2D3D.h"
+#include "api/solver/pose/I3DTransformSACFinderFrom2D3D.h"
 #include "api/features/IMatchesFilter.h"
 #include "api/display/I2DOverlay.h"
 #include "api/display/IMatchesOverlay.h"
@@ -124,7 +125,8 @@ private:
     SRef<features::IDescriptorMatcher> m_matcher;
     SRef<solver::pose::I3DTransformFinderFrom2D2D> m_poseFinderFrom2D2D;
 	SRef<solver::map::ITriangulator>  m_triangulator;
-    SRef<solver::pose::I3DTransformFinderFrom2D3D> m_PnP;
+    SRef<solver::pose::I3DTransformFinderFrom2D3D> m_PnP_NIM;
+    SRef<solver::pose::I3DTransformSACFinderFrom2D3D> m_PnP;
     SRef<solver::pose::I2D3DCorrespondencesFinder> m_corr2D3DFinder;
     SRef<solver::map::IMapFilter> m_mapFilter;
     SRef<solver::map::IMapper> m_mapper;
