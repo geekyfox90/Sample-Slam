@@ -55,6 +55,10 @@
 			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
 			<interface uuid="77281cda-47c2-4bb7-bde6-5b0d02e75dae" name="I3DTransformFinderFrom2D3D" description="I3DTransformFinderFrom2D3D"/>
 	</component>
+	<component uuid="4d369049-809c-4e99-9994-5e8167bab808" name="SolARPoseEstimationSACPnpOpencv" description="SolARPoseEstimationSACPnpOpencv">
+			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
+			<interface uuid="8dd889c5-e8e6-4b3b-92e4-34cf7442f272" name="I3DTransformSACFinderFrom2D3D" description="I3DTransformSACFinderFrom2D3D"/>
+	</component>
 	<component uuid="c8cc68db-9abd-4dab-9204-2fe4e9d010cd" name="SolARDescriptorsExtractorAKAZEOpencv" description="SolARDescriptorsExtractorAKAZEOpencv">
 			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
 			<interface uuid="c0e49ff1-0696-4fe6-85a8-9b2c1e155d2e" name="IDescriptorsExtractor" description="IDescriptorsExtractor"/>
