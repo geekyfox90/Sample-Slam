@@ -72,6 +72,8 @@
 
 #include "SolAR2DOverlayOpencv.h"
 
+#include <set>
+
 namespace SolAR {
 using namespace datastructure;
 using namespace api;
@@ -190,8 +192,10 @@ private:
     bool                                                m_keyFrameDetectionOn;   // if true, keyFrames can be detected
     bool                                                m_isLostTrack;
 
-
-
+    std::vector<SRef<Keyframe>>                         m_keyFrames;
+    std::map<SRef<Keyframe>,std::map<SRef<Keyframe>,int>> m_connectivityMap;
+    void addToConnectivityMap(std::vector<SRef<CloudPoint>>& cloudPoints,int currentKFId);
+    SRef<Keyframe> selectReferenceKeyFrame(std::vector<std::pair<SRef<Keyframe>,int>>& tab);
 
     bool detectFiducialMarkerCore(SRef<SolAR::datastructure::Image>& image);
     // Threads
@@ -208,6 +212,33 @@ private:
     void allTasks();
 
     void project3Dpoints(const Transform3Df pose,const std::vector<SRef<CloudPoint>>& cloud,std::vector<SRef<Point2Df>>& point2D);
+    void project3Dpoints(const Transform3Df pose,const std::set<SRef<CloudPoint>>& cloud,std::vector<SRef<Point2Df>>& point2D,std::vector<SRef<Point3Df>>& point3D);
+    void filterCloud(const Transform3Df pose1, const Transform3Df pose2, const std::vector<SRef<CloudPoint>>& input,  std::vector<int>& output);
+    bool accepMatch(const SRef<Keyframe> kf,const SRef<CloudPoint> cloudPoint,const SRef<DescriptorBuffer>& descriptors,std::vector<int>& indices,std::vector<float>& dists);
+
+    void computeConnectedMatches(SRef<Frame> newFrame,
+                                 std::vector<SRef<CloudPoint>>& foundPoints,
+                                 std::vector<SRef<Point2Df>> pt2d,
+                                 std::vector<SRef<Point3Df>> pt3d,
+                                 std::vector<std::tuple<SRef<CloudPoint>,SRef<Keyframe>,int>>& newMatches,
+                                 std::map<SRef<Keyframe>,int>& map,
+                                 std::vector<std::pair<SRef<Keyframe>,int>>& tab);
+
+    void computeConnectedMatches2(SRef<Frame> newFrame,
+                                  std::vector<SRef<CloudPoint>>& foundPoints,
+                                  std::vector<SRef<Point2Df>> pt2d,
+                                  std::vector<SRef<Point3Df>> pt3d,
+                                  std::vector<std::tuple<SRef<CloudPoint>,SRef<Keyframe>,int>>& newMatches,
+                                  std::map<SRef<Keyframe>,int>& map,
+                                  std::vector<std::pair<SRef<Keyframe>,int>>& tab);
+
+    void computeConnectedMatches3(SRef<Frame> newFrame,
+                                 std::vector<SRef<CloudPoint>>& foundPoints,
+                                 std::vector<SRef<Point2Df>> pt2d,
+                                 std::vector<SRef<Point3Df>> pt3d,
+                                 std::vector<std::tuple<SRef<CloudPoint>,SRef<Keyframe>,int>>& newMatches,
+                                 std::map<SRef<Keyframe>,int>& map,
+                                 std::vector<std::pair<SRef<Keyframe>,int>>& tab);
 
     xpcf::DelegateTask* m_taskAll;
 
@@ -224,7 +255,8 @@ private:
     xpcf::DropBuffer< std::pair< SRef<Image>,std::vector<SRef<Keypoint>> > > m_outBufferKeypoints;
     xpcf::DropBuffer< SRef<Frame > > m_outBufferDescriptors;
     xpcf::DropBuffer< std::tuple<SRef<Keyframe>, SRef<Keyframe>, std::vector<DescriptorMatch>, std::vector<DescriptorMatch>, std::vector<SRef<CloudPoint>>  > >  m_outBufferTriangulation;
-    xpcf::DropBuffer< std::tuple<SRef<Frame>,SRef<Keyframe>,std::vector<DescriptorMatch>,std::vector<DescriptorMatch> > >  m_keyFrameBuffer;
+     xpcf::DropBuffer< std::tuple<SRef<Keyframe>,SRef<Keyframe>,std::vector<DescriptorMatch>,std::vector<DescriptorMatch> > >  m_keyFrameBuffer;
+    //xpcf::DropBuffer< std::tuple<SRef<Frame>,SRef<Keyframe>,std::vector<DescriptorMatch>,std::vector<DescriptorMatch> > >  m_keyFrameBuffer;
     xpcf::DropBuffer< SRef<Image> > m_displayMatches;   // matches images should be displayed in the main thread
     xpcf::DropBuffer< SRef<Keyframe>> m_keyframeRelocBuffer;
 

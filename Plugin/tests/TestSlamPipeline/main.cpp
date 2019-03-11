@@ -155,6 +155,9 @@ int main(){
 #endif
 
     LOG_ADD_LOG_TO_CONSOLE();
+    clock_t start, end;
+    int count = 0;
+    start = clock();
 
     PipelineManager pipeline;
     if (pipeline.init("PipelineSlam.xml", "577ccd2c-de1b-402a-8829-496747598588"))
@@ -192,6 +195,7 @@ int main(){
                     s_pose(3,3)=1;
 //                    LOG_INFO("pose.matrix():\n {} \n",s_pose.matrix())
                     overlay3DComponent->draw(s_pose, camImage);
+                    count++;
                 }
 
                 if (imageViewerResult->display(camImage) == SolAR::FrameworkReturnCode::_STOP){
@@ -201,6 +205,12 @@ int main(){
              }
         }
     }
+    // display stats on frame rate
+    end = clock();
+    double duration = double(end - start) / CLOCKS_PER_SEC;
+    printf("\n\nElasped time is %.2lf seconds.\n", duration);
+    printf("Number of computed poses per second : %8.2f\n", count / duration);
+
 }
 
 

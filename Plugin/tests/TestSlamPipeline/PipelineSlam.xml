@@ -128,6 +128,11 @@
 			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
 			<interface uuid="4d5f2abe-beb7-11e8-a355-529269fb1459" name="IKeyframeSelector" description="IKeyframeSelector"/>
 	</component>
+	<component uuid="cbb620c3-a7fc-42d7-bcbf-f59b475b23b0" name="SolARBasicMatchesFilter" description="SolARBasicMatchesFilter">
+			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
+			<interface uuid="e0d6cc82-6af2-493d-901a-2384fca0b16f" name="IMatchesFilter" description= "IMatchesFilter"/>
+	</component>
+
   </module>
   
   <module uuid="6e960df6-9a36-11e8-9eb6-529269fb1459" name="SolARModuleOpenGL" path="$BCOMDEVROOT/bcomBuild/SolARModuleOpenGL/0.5.1/lib/x86_64/shared" description="Module OpenGL">
@@ -190,7 +195,7 @@
 	</component>
 		<component uuid="fa4a780a-9720-11e8-9eb6-529269fb1459"> <!-- SolARVideoAsCameraOpencv -->
 			<property name="calibrationFile" type="string" value="camera_calibration.yml"/>
-			<property name="videoPath" type="string" value="video.mp4"/>
+			<property name="videoPath" type="string" value="Video8.mp4"/>
 		</component>
 		<component uuid="b8a8b963-ba55-4ea4-b045-d9e7e8f6db02"> <!-- SolARImagesAsCameraOpencv -->
             <property name="calibrationFile" type="string" value="camera_calibration.yml"/>
@@ -199,13 +204,13 @@
 		<component uuid="e81c7e4e-7da6-476a-8eba-078b43071272"> <!-- SolARKeypointDetectorOpencv -->
 			<property name="type" type="string" value="AKAZE2"/>
 			<property name="imageRatio" type="Float" value="1.0"/>
-			<property name="nbDescriptors" type="Integer" value="3000"/>
+			<property name="nbDescriptors" type="Integer" value="300"/>
 			<property name="threshold" type="Float" value="0.0001"/>
         </component>
 		<component uuid="d1f9317c-9519-4671-8ff5-4629773544f2"> <!-- SolARKeypointDetectorNonFreeOpencv -->
 			<property name="type" type="string" value="SURF"/>
 			<property name="imageRatio" type="Float" value="1.0"/>
-			<property name="nbDescriptors" type="Integer" value="-1"/>
+			<property name="nbDescriptors" type="Integer" value="500"/>
 			<property name="threshold" type="Double" value="-1.0"/>
         </component>
 		<component uuid="c8cc68db-9abd-4dab-9204-2fe4e9d010cd"> <!-- SolARDescriptorsExtractorAKAZEOpencv -->
