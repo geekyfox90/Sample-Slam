@@ -91,7 +91,8 @@ FrameworkReturnCode PipelineSlam::init(SRef<xpcf::IComponentManager> xpcfCompone
     m_triangulator =xpcfComponentManager->create<MODULES::OPENCV::SolARSVDTriangulationOpencv>()->bindTo<solver::map::ITriangulator>();
     m_basicMatchesFilter = xpcfComponentManager->create<SolARBasicMatchesFilter>()->bindTo<features::IMatchesFilter>();
     m_geomMatchesFilter =xpcfComponentManager->create<MODULES::OPENCV::SolARGeometricMatchesFilterOpencv>()->bindTo<features::IMatchesFilter>();
-    m_PnP =xpcfComponentManager->create<MODULES::OPENCV::SolARPoseEstimationPnpOpencv>()->bindTo<solver::pose::I3DTransformFinderFrom2D3D>();
+    m_PnP_NIM =xpcfComponentManager->create<MODULES::OPENCV::SolARPoseEstimationPnpOpencv>()->bindTo<solver::pose::I3DTransformFinderFrom2D3D>();
+    m_PnP =xpcfComponentManager->create<MODULES::OPENCV::SolARPoseEstimationSACPnpOpencv>()->bindTo<solver::pose::I3DTransformSACFinderFrom2D3D>();
     m_corr2D3DFinder =xpcfComponentManager->create<MODULES::OPENCV::SolAR2D3DCorrespondencesFinderOpencv>()->bindTo<solver::pose::I2D3DCorrespondencesFinder>();
     m_mapFilter =xpcfComponentManager->create<MODULES::TOOLS::SolARMapFilter>()->bindTo<solver::map::IMapFilter>();
     m_mapper =xpcfComponentManager->create<MODULES::TOOLS::SolARMapper>()->bindTo<solver::map::IMapper>();
@@ -227,7 +228,7 @@ bool PipelineSlam::detectFiducialMarkerCore(SRef<Image>& image)
             m_img2worldMapper->map(pattern2DPoints, pattern3DPoints);
 
             // Compute the pose of the camera using a Perspective n Points algorithm using only the 4 corners of the marker
-            if (m_PnP->estimate(img2DPoints, pattern3DPoints, m_pose) == FrameworkReturnCode::_SUCCESS)
+            if (m_PnP_NIM->estimate(img2DPoints, pattern3DPoints, m_pose) == FrameworkReturnCode::_SUCCESS)
             {
                 poseComputed = true;
              }
