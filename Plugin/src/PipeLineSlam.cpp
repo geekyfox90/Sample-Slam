@@ -580,9 +580,9 @@ void PipelineSlam::processFrames(){
 
             //try to find additional matches with connected Reference keyframes
             std::vector<std::pair<SRef<Keyframe>,int>> tab;
-            computeConnectedMatches(newFrame, foundPoints,pt2d,pt3d,newMatches, map, tab);
-//            computeConnectedMatches2(newFrame, foundPoints,pt2d,pt3d,newMatches, map, tab);
-//            computeConnectedMatches3(newFrame, foundPoints,pt2d,pt3d,newMatches, map, tab);
+//            computeConnectedMatches(newFrame, foundPoints,pt2d,pt3d,newMatches, map, tab);
+//           computeConnectedMatches2(newFrame, foundPoints,pt2d,pt3d,newMatches, map, tab);
+            computeConnectedMatches3(newFrame, foundPoints,pt2d,pt3d,newMatches, map, tab);
 
 #if 1
                 m_i2DOverlay->bindTo<xpcf::IConfigurable>()->getProperty("color")->setUnsignedIntegerValue(0,0);
