@@ -37,9 +37,9 @@ DEFINES += "_BCOM_SHARED=__declspec(dllexport)"
 
 INCLUDEPATH += interfaces/
 
-HEADERS += interfaces/PipelineSlam.h \
+HEADERS += interfaces/PipeLineSlam.h \
 
-SOURCES += src/PipelineSlam.cpp \
+SOURCES += src/PipeLineSlam.cpp \
 	
 unix {
     QMAKE_CXXFLAGS += -Wignored-qualifiers
