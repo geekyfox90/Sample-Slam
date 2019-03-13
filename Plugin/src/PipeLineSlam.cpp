@@ -958,10 +958,15 @@ void PipelineSlam::project3Dpoints(const Transform3Df pose,const std::vector<SRe
         float p2 = dist[3];
         float k3 = dist[4];
     for (auto cld = cloud.begin();cld!=cloud.end();++cld){
+#if (_WIN64) || (_WIN32)
         Vector3f point((*cld)->getX(), (*cld)->getY(), (*cld)->getZ());
+#else
+        Vector4f point((*cld)->getX(), (*cld)->getY(), (*cld)->getZ(),1);
+#endif
         pointInCamRef=invPose*point;
         if(pointInCamRef(2)>0){
-            Vector3f p=calib*pointInCamRef;
+            Vector3f pic(pointInCamRef(0),pointInCamRef(1),pointInCamRef(2));
+            Vector3f p=calib*pic;
             float x= p(0)/p(2);
             float y= p(1)/p(2);
             float r2 = x * x + y * y;
@@ -997,11 +1002,16 @@ void PipelineSlam::project3Dpoints(const Transform3Df pose,const std::set<SRef<C
             float p1 = dist[2];
             float p2 = dist[3];
             float k3 = dist[4];
-        for (auto cld :cloud){
-            Vector3f point(cld->getX(), cld->getY(), cld->getZ());
+        for (std::set<SRef<CloudPoint>>::iterator cld=cloud.begin();cld!=cloud.end();cld++){
+#if (_WIN64) || (_WIN32)
+        Vector3f point((*cld)->getX(), (*cld)->getY(), (*cld)->getZ());
+#else
+        Vector4f point((*cld)->getX(), (*cld)->getY(), (*cld)->getZ(),1);
+#endif
             pointInCamRef=invPose*point;
             if(pointInCamRef(2)>0){
-                Vector3f p=calib*pointInCamRef;
+                Vector3f pic(pointInCamRef(0),pointInCamRef(1),pointInCamRef(2));
+                Vector3f p=calib*pic;
                 float x= p(0)/p(2);
                 float y= p(1)/p(2);
                 float r2 = x * x + y * y;
