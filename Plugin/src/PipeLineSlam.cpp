@@ -427,20 +427,16 @@ void PipelineSlam::mapUpdate(){
     newCloud=std::get<4>(element);
 
 
-    std::map<unsigned int, SRef<CloudPoint>> frameVisibility = newKeyframe->getReferenceKeyframe()->getVisibleMapPoints();
     std::map<unsigned int, unsigned int> visibleKeypoints= newKeyframe->getReferenceKeyframe()->getVisibleKeypoints();
-    frameVisibility = newKeyframe->getVisibleMapPoints();
 
     LOG_DEBUG(" frame pose estimation :\n {}", newKeyframe->getPose().matrix());
     LOG_DEBUG("Number of matches: {}, number of 3D points:{}", remainingMatches.size(), newCloud.size());
     //newKeyframe = xpcf::utils::make_shared<Keyframe>(newFrame);
     m_mapFilter->filter(refKeyframe->getPose(), newKeyframe->getPose(), newCloud, filteredCloud);
-    frameVisibility = newKeyframe->getVisibleMapPoints();
+
     m_mapper->update(m_map, newKeyframe, filteredCloud, foundMatches, remainingMatches);
 
     addToConnectivityMap(filteredCloud,newKeyframe->m_idx);
-
-    frameVisibility = newKeyframe->getVisibleMapPoints();
 
     m_referenceKeyframe = newKeyframe;
     m_frameToTrack = xpcf::utils::make_shared<Frame>(m_referenceKeyframe);
