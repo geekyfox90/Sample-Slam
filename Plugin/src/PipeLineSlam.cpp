@@ -493,8 +493,7 @@ void PipelineSlam::doTriangulation(){
 
     if(remainingMatches.size())
             m_triangulator->triangulate(newKeyframe, remainingMatches, newCloud);
-    //triangulator->triangulate(refKeyFrame->getKeypoints(), newFrame->getKeypoints(), remainingMatches,std::make_pair<int,int>((int)refKeyFrame->m_idx+0,(int)(refKeyFrame->m_idx+1)),
-    //                    refKeyFrame->getPose(), newFrame->getPose(), newCloud);
+
     if(m_outBufferTriangulation.empty())
         m_outBufferTriangulation.push(std::make_tuple(newKeyframe,refKeyFrame,foundMatches,remainingMatches,newCloud));
 
