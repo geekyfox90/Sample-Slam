@@ -60,6 +60,9 @@
 #include "api/geom/I2DTransform.h"
 #include "api/features/IMatchesFilter.h"
 
+#include "api/solver/map/IBundler.h"
+
+
 #ifdef USE_OPENGL
     #include "api/sink/ISinkPoseTextureBuffer.h"
 #else
@@ -159,6 +162,8 @@ private:
     SRef<geom::IImage2WorldMapper> m_img2worldMapper;
 
 
+    SRef<api::solver::map::IBundler> m_bundler;
+
     // display stuff
     SRef<api::display::I2DOverlay> m_i2DOverlay;
 
@@ -217,6 +222,7 @@ private:
     void project3Dpoints(const Transform3Df pose,const std::set<SRef<CloudPoint>>& cloud,std::vector<SRef<Point2Df>>& point2D,std::vector<SRef<Point3Df>>& point3D);
     void filterCloud(const Transform3Df pose1, const Transform3Df pose2, const std::vector<SRef<CloudPoint>>& input,  std::vector<int>& output);
     bool accepMatch(const SRef<Keyframe> kf,const SRef<CloudPoint> cloudPoint,const SRef<DescriptorBuffer>& descriptors,std::vector<int>& indices,std::vector<float>& dists);
+    bool doLocalBundleAdjustment();
 
     void computeConnectedMatches(SRef<Frame> newFrame,
                                  std::vector<SRef<CloudPoint>>& foundPoints,
@@ -241,6 +247,8 @@ private:
                                  std::vector<std::tuple<SRef<CloudPoint>,SRef<Keyframe>,int>>& newMatches,
                                  std::map<SRef<Keyframe>,int>& map,
                                  std::vector<std::pair<SRef<Keyframe>,int>>& tab);
+
+    double getReprojectionError(SRef<Keyframe> keyFrame);
 
     xpcf::DelegateTask* m_taskAll;
 

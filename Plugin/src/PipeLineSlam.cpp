@@ -4,6 +4,7 @@
 #include "SolARModuleOpencv_traits.h"
 #include "SolARModuleTools_traits.h"
 #include "SolARModuleFBOW_traits.h"
+#include "SolARModuleCeres_traits.h"
 #include "core/Log.h"
 #include "opencv2/flann/miniflann.hpp"
 
@@ -14,6 +15,7 @@ using namespace SolAR;
 using namespace SolAR::datastructure;
 using namespace SolAR::api;
 using namespace SolAR::MODULES::OPENCV;
+using namespace SolAR::MODULES::CERES;
 using namespace SolAR::MODULES::FBOW;
 #ifndef USE_FREE
 using namespace SolAR::MODULES::NONFREEOPENCV;
@@ -98,6 +100,7 @@ FrameworkReturnCode PipelineSlam::init(SRef<xpcf::IComponentManager> xpcfCompone
     m_mapper =xpcfComponentManager->create<MODULES::TOOLS::SolARMapper>()->bindTo<solver::map::IMapper>();
     m_keyframeSelector =xpcfComponentManager->create<MODULES::TOOLS::SolARKeyframeSelector>()->bindTo<solver::map::IKeyframeSelector>();
     m_kfRetriever = xpcfComponentManager->create<MODULES::FBOW::SolARKeyframeRetrieverFBOW>()->bindTo<reloc::IKeyframeRetriever>();
+    m_bundler = xpcfComponentManager->create<MODULES::CERES::SolARBundlerCeres>()->bindTo<api::solver::map::IBundler>();
 
 #ifdef USE_OPENGL
     m_sink = xpcfComponentManager->create<MODULES::OPENGL::SinkPoseTextureBuffer>()->bindTo<sink::ISinkPoseTextureBuffer>();
@@ -446,6 +449,13 @@ void PipelineSlam::mapUpdate(){
     m_keyframePoses.push_back(newKeyframe->getPose());
     LOG_DEBUG(" cloud current size: {} \n", m_map->getPointCloud()->size());
 
+    for (auto kf:m_keyFrames){
+            double er1=getReprojectionError(kf);
+            std::cout << "kf id : " << kf->m_idx << " reproj err : " << er1 << "\n";
+    }
+
+    doLocalBundleAdjustment();
+
     m_keyFrameDetectionOn = true;					// re - allow keyframe detection
 
     return;
@@ -722,6 +732,12 @@ void PipelineSlam::processFrames(){
             LOG_DEBUG(" cloud current size: {} \n", m_map->getPointCloud()->size());
             std::cout << "nb clound points :" << m_map->getPointCloud()->size() << "\n";
 
+            for (auto kf:m_keyFrames){
+                    double er1=getReprojectionError(kf);
+                    std::cout << "kf id : " << kf->m_idx << " reproj err : " << er1 << "\n";
+            }
+
+            doLocalBundleAdjustment();
 
             m_keyFrameDetectionOn = true;					// re - allow keyframe detection
 
@@ -900,6 +916,80 @@ void PipelineSlam::allTasks(){
 //    mapUpdate();
 }
 
+
+double PipelineSlam::getReprojectionError(SRef<Keyframe> keyFrame){
+    double r;
+    Transform3Df pose=keyFrame->getPose();
+    std::vector<SRef<CloudPoint>> cloud;
+    std::vector<int>  indices;
+    std::vector<SRef<Point2Df>>  point2D;
+
+    auto visibility=keyFrame->getVisibleMapPoints();
+    for(std::map<unsigned int, SRef<CloudPoint>>::iterator v=visibility.begin();v!=visibility.end();++v){
+        auto ind=v->first;
+        auto cp=v->second;
+        indices.push_back(ind);
+        cloud.push_back(cp);
+    }
+
+    project3Dpoints(pose,cloud,point2D);
+    auto keypoints=keyFrame->getKeypoints();
+    r=0;
+    int i;
+    for(i=0;i<point2D.size();++i){
+
+        SRef<Keypoint> kp = keypoints[indices[i]];
+        SRef<Point2Df> p2d = point2D[i];
+
+        double dx=p2d->getX()-kp->getX();
+        double dy=p2d->getY()-kp->getY();
+
+        r+=dx*dx+dy*dy;
+    }
+    return sqrt(r/i);
+}
+
+bool PipelineSlam::doLocalBundleAdjustment(){
+
+    // get reference keyframe and connected keyframes
+    std::vector<SRef<Keyframe>>keyframes;
+    std::vector<int>selectedKeyframes;
+    std::vector<SRef<CloudPoint>>points3d;
+    CamCalibration  intrinsic = m_camera->getIntrinsicsParameters();
+    CamDistortion   distorsion = m_camera->getDistorsionParameters();
+
+
+//    int count=0;
+//    keyframes.push_back(m_referenceKeyframe);
+
+//    std::map<SRef<Keyframe>,int> m=m_connectivityMap[m_referenceKeyframe];
+//    auto id0=m_referenceKeyframe->m_idx;
+//    for(auto k:m){
+//        auto id1=k.first->m_idx;
+//        std::cout << " " << id0  << " " << id1 << " : " << k.second << "\n";
+//        keyframes.push_back(k.first);
+//    }
+
+
+    double reproj_errorFinal  = 0.f;
+    points3d =*m_map->getPointCloud() ;
+    reproj_errorFinal = m_bundler->solve(m_keyFrames,
+                                       points3d,
+                                       intrinsic,
+                                       distorsion,
+                                       selectedKeyframes);
+
+    std::cout << "reprojection error final: " << reproj_errorFinal << "\n";
+
+    for(auto k:m_keyFrames){
+        std::cout << "kf : " << k->m_idx << " reproj error :" << getReprojectionError(k) << "\n";
+    }
+
+    getchar();
+
+    return true;
+}
+
 bool PipelineSlam::accepMatch(const SRef<Keyframe> kf, const SRef<CloudPoint> cloudPoint,const SRef<DescriptorBuffer>& descriptors,std::vector<int>& indices,std::vector<float>& dists){
     int size=61;
     float distanceRatio=0.75;
@@ -980,6 +1070,8 @@ void PipelineSlam::project3Dpoints(const Transform3Df pose,const std::vector<SRe
 
             point2D.push_back(p2d);
         }
+        else
+            point2D.push_back(xpcf::utils::make_shared<Point2Df> (0,0));
     }
 }
 

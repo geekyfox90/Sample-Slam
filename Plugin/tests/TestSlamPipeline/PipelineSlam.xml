@@ -158,6 +158,15 @@
         </component>
     </module>   
 
+  
+  	<module uuid="09f4a367-c5bf-4a9f-9f3b-42424d52f717" name="SolARModuleCeres" description="SolARModuleCeres" path="$BCOMDEVROOT/bcomBuild/SolARModuleCeres/0.5.1/lib/x86_64/shared">
+        <component uuid="4897fc13-682c-4e95-8aba-abd9f7a17193" name="SolARBundlerCeres" description="SolARBundlerCeres">
+                <interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
+                <interface uuid="35b9bdb7-d23c-4909-984f-ae7f9a292e6c" name="IBundler" description="IBundler"/>
+        </component>
+    </module>
+
+
 	
   <configuration>
     <component uuid="5B7396F4-A804-4F3C-A0EB-FB1D56042BB4">
@@ -256,6 +265,16 @@
 			<property name="reprojErrorThreshold" type="float" value="2.5"/>
 			<property name="cheiralityCheck" type="integer" value ="1"/>
 		</component>
+    <component uuid="4897fc13-682c-4e95-8aba-abd9f7a17193"> <!-- SolARCeresBundle -->
+      <property name="iterationsCount" type="UnsignedInteger" value="20"/>
+			<property name="fixedMap" type="UnsignedInteger" value="0.
+																	"/>
+			<property name="fixedExtrinsics" type="UnsignedInteger" value="0"/>
+			<property name="fixedIntrinsics" type="UnsignedInteger" value="1"/>
+			<property name="fixedFirstPose" type="UnsignedInteger" value="0"/>
+     </component>
+
+
 		
   </configuration>
 </xpcf-registry>
