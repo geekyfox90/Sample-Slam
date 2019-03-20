@@ -913,21 +913,44 @@ void PipelineSlam::allTasks(){
 }
 
 
-double PipelineSlam::getReprojectionError(SRef<Keyframe> keyFrame){
+double PipelineSlam::getReprojectionError(SRef<Keyframe> keyFrame, bool fromCloud){
     double r;
     Transform3Df pose=keyFrame->getPose();
     std::vector<SRef<CloudPoint>> cloud;
     std::vector<int>  indices;
     std::vector<SRef<Point2Df>>  point2D;
 
-    auto visibility=keyFrame->getVisibleMapPoints();
-    for(std::map<unsigned int, SRef<CloudPoint>>::iterator v=visibility.begin();v!=visibility.end();++v){
-        auto ind=v->first;
-        auto cp=v->second;
-        indices.push_back(ind);
-        cloud.push_back(cp);
-    }
+    if(fromCloud){
+        auto pointCloud=*m_map->getPointCloud();
+        auto visibility=keyFrame->getVisibleMapPoints();
+        for(auto cp:pointCloud){
+            std::map<unsigned int, unsigned int> vis=cp->getVisibility();
+            auto itr_v = vis.find( keyFrame->m_idx);
+            if(itr_v!=vis.end()){
+                cloud.push_back(cp);
+                indices.push_back(itr_v->second);
+                int count=0;
+                for(std::map<unsigned int, SRef<CloudPoint>>::iterator v=visibility.begin();v!=visibility.end();++v){
+                    if(v->second==cp){
+                        count++;
+                    }
+                }
+                if(count==0){
+                    std::cout << "cp not found \n";
+                }
 
+            }
+        }
+    }
+    else{
+        auto visibility=keyFrame->getVisibleMapPoints();
+        for(std::map<unsigned int, SRef<CloudPoint>>::iterator v=visibility.begin();v!=visibility.end();++v){
+            auto ind=v->first;
+            auto cp=v->second;
+            indices.push_back(ind);
+            cloud.push_back(cp);
+        }
+    }
     project3Dpoints(pose,cloud,point2D);
     auto keypoints=keyFrame->getKeypoints();
     r=0;

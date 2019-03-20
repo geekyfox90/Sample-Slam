@@ -248,7 +248,7 @@ private:
                                  std::map<SRef<Keyframe>,int>& map,
                                  std::vector<std::pair<SRef<Keyframe>,int>>& tab);
 
-    double getReprojectionError(SRef<Keyframe> keyFrame);
+    double getReprojectionError(SRef<Keyframe> keyFrame, bool fromCloud=false);
 
     xpcf::DelegateTask* m_taskAll;
 
