@@ -445,12 +445,18 @@ void PipelineSlam::mapUpdate(){
     m_keyframePoses.push_back(newKeyframe->getPose());
     LOG_DEBUG(" cloud current size: {} \n", m_map->getPointCloud()->size());
 
+
     for (auto kf:m_keyFrames){
             double er1=getReprojectionError(kf);
             std::cout << "kf id : " << kf->m_idx << " reproj err : " << er1 << "\n";
     }
 
-    doLocalBundleAdjustment();
+    for (auto kf:m_keyFrames){
+            double er1=getReprojectionError(kf,true);
+            std::cout << "kf id : " << kf->m_idx << " reproj err : " << er1 << "\n";
+    }
+
+//    doLocalBundleAdjustment();
 
     m_keyFrameDetectionOn = true;					// re - allow keyframe detection
 
@@ -588,8 +594,6 @@ void PipelineSlam::processFrames(){
 
 
      if (m_PnP->estimate(pt2d, pt3d, imagePoints_inliers, worldPoints_inliers, m_pose , m_lastPose) == FrameworkReturnCode::_SUCCESS){
-//            std::cout << m_lastPose.matrix() << "\n";
-//            std::cout << m_pose.matrix() << "\n";
 
             LOG_INFO(" pnp inliers size: {} / {} ==> {}%",worldPoints_inliers.size(), pt3d.size(),100.f*worldPoints_inliers.size()/pt3d.size());
             std::map<SRef<Keyframe>,int> map = m_connectivityMap[m_referenceKeyframe];
@@ -598,16 +602,8 @@ void PipelineSlam::processFrames(){
             std::vector<std::pair<SRef<Keyframe>,int>> tab;
 //            computeConnectedMatches(newFrame, foundPoints,pt2d,pt3d,newMatches, map, tab);
 //           computeConnectedMatches2(newFrame, foundPoints,pt2d,pt3d,newMatches, map, tab);
-            computeConnectedMatches3(newFrame, foundPoints,pt2d,pt3d,newMatches, map, tab);
+             computeConnectedMatches3(newFrame, foundPoints,pt2d,pt3d,newMatches, map, tab);
 
-#if 1
-                m_i2DOverlay->bindTo<xpcf::IConfigurable>()->getProperty("color")->setUnsignedIntegerValue(0,0);
-                m_i2DOverlay->bindTo<xpcf::IConfigurable>()->getProperty("color")->setUnsignedIntegerValue(255,1);
-                m_i2DOverlay->bindTo<xpcf::IConfigurable>()->getProperty("color")->setUnsignedIntegerValue(0,2);
-                m_i2DOverlay->bindTo<xpcf::IConfigurable>()->getProperty("radius")->setUnsignedIntegerValue(1);
-//                m_i2DOverlay->drawCircles(pt2d,camImage);
-//                getchar();
-#endif
 
         m_lastPose = m_pose;
 
@@ -661,79 +657,63 @@ void PipelineSlam::processFrames(){
         // If the camera has moved enough, create a keyframe and map the scene
 
         if ( m_keyFrameDetectionOn &&  (newFrame->getReferenceKeyframe()->getVisibleMapPoints().size()*0.8f > foundMatches.size()) ){
-//        if ( m_keyFrameDetectionOn &&  m_keyframeSelector->select(newFrame, foundMatches) ){
+//          if ( m_keyFrameDetectionOn &&  m_keyframeSelector->select(newFrame, foundMatches) ){
             m_keyFrameDetectionOn=false;
             LOG_INFO("New key Frame ")
             SRef<Keyframe> newKeyframe = xpcf::utils::make_shared<Keyframe>(newFrame);
             m_keyFrames.push_back(newKeyframe);
             LOG_INFO("# of keyFrames : {}",m_keyFrames.size());
 
-            // the 3D points in common with the last reference keyFrame
-            for(int i=0;i<foundMatches.size();++i){
-                SRef<CloudPoint> cp= foundPoints[i];
-                cp->visibilityAddKeypoint(newKeyframe->m_idx,foundMatches[i].getIndexInDescriptorB());
-                (m_connectivityMap[newKeyframe])[newKeyframe->getReferenceKeyframe()]++;
-                (m_connectivityMap[newKeyframe->getReferenceKeyframe()])[newKeyframe]++;
-            }
-
-            // the 3D points in common with the connected keyFrames
-            foundPoints.clear();
-            std::map<unsigned int, SRef<CloudPoint>> visibility;
-            for(auto nm:newMatches){
-                SRef<CloudPoint> cp=std::get<0>(nm);
-                SRef<Keyframe> kf=std::get<1>(nm);
-                int kpId=std::get<2>(nm);
-                foundPoints.push_back(cp);
-                visibility[kpId]=cp;
-                cp->visibilityAddKeypoint(newKeyframe->m_idx,kpId);
-                (m_connectivityMap[newKeyframe])[kf]++;
-                (m_connectivityMap[kf])[newKeyframe]++;
-            }
-            newKeyframe->addVisibleMapPoints(visibility);
 
             // triangulate the remaining matches
             std::vector<SRef<CloudPoint>> newCloud;
             if(remainingMatches.size())
                 m_triangulator->triangulate(newKeyframe, remainingMatches, newCloud);
 
-            // filter the obtained cloud
             std::vector<SRef<CloudPoint>> filteredCloud;
-            std::vector<int> indexes;
-            filterCloud(newKeyframe->getReferenceKeyframe()->getPose(), newKeyframe->getPose(), newCloud, indexes);
 
-            std::map<unsigned int, SRef<CloudPoint>> visibility0,visibility1;
-            if(indexes.size()){
-                for(auto i:indexes){
-                    auto cp = newCloud[i];
-                    auto m = remainingMatches[i];
-                    cp->visibilityAddKeypoint(newKeyframe->getReferenceKeyframe()->m_idx,m.getIndexInDescriptorA());
-                    cp->visibilityAddKeypoint(newKeyframe->m_idx,m.getIndexInDescriptorB());
-                    visibility0[m.getIndexInDescriptorA()]=cp;
-                    visibility1[m.getIndexInDescriptorB()]=cp;
-                    filteredCloud.push_back(cp);
-                    (m_connectivityMap[newKeyframe])[newKeyframe->getReferenceKeyframe()]++;
-                    (m_connectivityMap[newKeyframe->getReferenceKeyframe()])[newKeyframe]++;
+            m_mapFilter->filter(newKeyframe->getReferenceKeyframe()->getPose(), newKeyframe->getPose(), newCloud, filteredCloud);
+
+            m_mapper->update(m_map, newKeyframe, filteredCloud, foundMatches, remainingMatches);
+
+            // update connectivity map
+            addToConnectivityMap(filteredCloud,newKeyframe->m_idx);
+
+            // the 3D points in common with the connected keyFrames
+            std::map<unsigned int, SRef<CloudPoint>> visibility,visibilityKF;
+            foundPoints.clear();
+            visibilityKF=newKeyframe->getVisibleMapPoints();
+            for(auto nm:newMatches){
+                SRef<CloudPoint> cp=std::get<0>(nm);
+                SRef<Keyframe> kf=std::get<1>(nm);
+                int kpId=std::get<2>(nm);
+                if(visibility.find(kpId)==visibility.end() && visibilityKF.find(kpId)==visibilityKF.end()){
+                    foundPoints.push_back(cp);
+                    visibility[kpId]=cp;
+                    cp->visibilityAddKeypoint(newKeyframe->m_idx,kpId);
+                    (m_connectivityMap[newKeyframe])[kf]++;
+                    (m_connectivityMap[kf])[newKeyframe]++;
                 }
             }
 
-            newKeyframe->getReferenceKeyframe()->addVisibleMapPoints(visibility0);
-            newKeyframe->addVisibleMapPoints(visibility1);
+            newKeyframe->addVisibleMapPoints(visibility);
 
             m_referenceKeyframe = newKeyframe;
             m_frameToTrack = xpcf::utils::make_shared<Frame>(m_referenceKeyframe);
             m_frameToTrack->setReferenceKeyframe(m_referenceKeyframe);
             m_kfRetriever->addKeyframe(m_referenceKeyframe); // add keyframe for reloc
             m_keyframePoses.push_back(newKeyframe->getPose());
-            m_map->addCloudPoints(filteredCloud);
+
             LOG_DEBUG(" cloud current size: {} \n", m_map->getPointCloud()->size());
             std::cout << "nb clound points :" << m_map->getPointCloud()->size() << "\n";
 
             for (auto kf:m_keyFrames){
                     double er1=getReprojectionError(kf);
-                    std::cout << "kf id : " << kf->m_idx << " reproj err : " << er1 << "\n";
+                    double er2=getReprojectionError(kf,true);
+                    std::cout << "kf id : " <<  kf->m_idx << "\t" << " reproj err : " << er1 << "\t" << er2 << "\n";
             }
 
-            doLocalBundleAdjustment();
+//            doLocalBundleAdjustment();
 
             m_keyFrameDetectionOn = true;					// re - allow keyframe detection
 
@@ -936,7 +916,7 @@ double PipelineSlam::getReprojectionError(SRef<Keyframe> keyFrame, bool fromClou
                     }
                 }
                 if(count==0){
-                    std::cout << "cp not found \n";
+                     std::cout << "cp not found \n";
                 }
 
             }
