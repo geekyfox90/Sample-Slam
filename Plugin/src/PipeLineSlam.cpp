@@ -1061,18 +1061,20 @@ void PipelineSlam::project3Dpoints(const Transform3Df pose,const std::vector<SRe
 #endif
         pointInCamRef=invPose*point;
         if(pointInCamRef(2)>0){
-            Vector3f pic(pointInCamRef(0),pointInCamRef(1),pointInCamRef(2));
-            Vector3f p=calib*pic;
-            float x= p(0)/p(2);
-            float y= p(1)/p(2);
+            float x=pointInCamRef(0)/pointInCamRef(2);
+            float y=pointInCamRef(1)/pointInCamRef(2);
+
             float r2 = x * x + y * y;
             float r4 = r2 * r2;
             float r6 = r4 * r2;
             float r_coeff = 1.0 + k1 * r2 + k2 * r4 + k3 * r6;
-            float xd = x * r_coeff + 2.0 * p1 * x * y + p2 * (r2 + 2.0 * x * x);
-            float yd = y * r_coeff + 2.0 * p2 * x * y + p1 * (r2 + 2.0 * y * y);
+            float xx = x * r_coeff + 2.0 * p1 * x * y + p2 * (r2 + 2.0 * x * x);
+            float yy = y * r_coeff + 2.0 * p2 * x * y + p1 * (r2 + 2.0 * y * y);
 
-            SRef<Point2Df> p2d=xpcf::utils::make_shared<Point2Df> (p(0)/p(2),p(1)/p(2));
+            float u = calib(0,0)*xx +calib(0,2);
+            float v = calib(1,1)*yy +calib(1,2);
+
+            SRef<Point2Df> p2d=xpcf::utils::make_shared<Point2Df> (u,v);
 
             point2D.push_back(p2d);
         }
@@ -1108,18 +1110,20 @@ void PipelineSlam::project3Dpoints(const Transform3Df pose,const std::set<SRef<C
 #endif
             pointInCamRef=invPose*point;
             if(pointInCamRef(2)>0){
-                Vector3f pic(pointInCamRef(0),pointInCamRef(1),pointInCamRef(2));
-                Vector3f p=calib*pic;
-                float x= p(0)/p(2);
-                float y= p(1)/p(2);
+                float x=pointInCamRef(0)/pointInCamRef(2);
+                float y=pointInCamRef(1)/pointInCamRef(2);
+
                 float r2 = x * x + y * y;
                 float r4 = r2 * r2;
                 float r6 = r4 * r2;
                 float r_coeff = 1.0 + k1 * r2 + k2 * r4 + k3 * r6;
-                float xd = x * r_coeff + 2.0 * p1 * x * y + p2 * (r2 + 2.0 * x * x);
-                float yd = y * r_coeff + 2.0 * p2 * x * y + p1 * (r2 + 2.0 * y * y);
+                float xx = x * r_coeff + 2.0 * p1 * x * y + p2 * (r2 + 2.0 * x * x);
+                float yy = y * r_coeff + 2.0 * p2 * x * y + p1 * (r2 + 2.0 * y * y);
 
-                SRef<Point2Df> p2d=xpcf::utils::make_shared<Point2Df> (p(0)/p(2),p(1)/p(2));
+                float u = calib(0,0)*xx +calib(0,2);
+                float v = calib(1,1)*yy +calib(1,2);
+
+                SRef<Point2Df> p2d=xpcf::utils::make_shared<Point2Df> (u,v);
 
                 point2D.push_back(p2d);
                 SRef<Point3Df> p3d=xpcf::utils::make_shared<Point3Df>(point(0),point(1),point(2));
