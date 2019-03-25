@@ -456,7 +456,7 @@ void PipelineSlam::mapUpdate(){
             std::cout << "kf id : " << kf->m_idx << " reproj err : " << er1 << "\n";
     }
 
-//    doLocalBundleAdjustment();
+    doLocalBundleAdjustment();
 
     m_keyFrameDetectionOn = true;					// re - allow keyframe detection
 
@@ -713,7 +713,7 @@ void PipelineSlam::processFrames(){
                     std::cout << "kf id : " <<  kf->m_idx << "\t" << " reproj err : " << er1 << "\t" << er2 << "\n";
             }
 
-//            doLocalBundleAdjustment();
+            doLocalBundleAdjustment();
 
             m_keyFrameDetectionOn = true;					// re - allow keyframe detection
 
@@ -970,6 +970,15 @@ bool PipelineSlam::doLocalBundleAdjustment(){
 //    }
 
 
+    auto id0=m_referenceKeyframe->m_idx;
+    selectedKeyframes.push_back(id0);
+    std::map<SRef<Keyframe>,int> m=m_connectivityMap[m_referenceKeyframe];
+    for(auto k:m){
+        auto id1=k.first->m_idx;
+        std::cout << " " << id0  << " " << id1 << " : " << k.second << "\n";
+        selectedKeyframes.push_back(id1);
+    }
+
     double reproj_errorFinal  = 0.f;
     points3d =*m_map->getPointCloud() ;
     reproj_errorFinal = m_bundler->solve(m_keyFrames,
@@ -983,8 +992,6 @@ bool PipelineSlam::doLocalBundleAdjustment(){
     for(auto k:m_keyFrames){
         std::cout << "kf : " << k->m_idx << " reproj error :" << getReprojectionError(k) << "\n";
     }
-
-    getchar();
 
     return true;
 }
