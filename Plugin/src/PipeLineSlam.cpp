@@ -958,22 +958,20 @@ bool PipelineSlam::doLocalBundleAdjustment(){
     CamDistortion   distorsion = m_camera->getDistorsionParameters();
 
 
-//    int count=0;
-//    keyframes.push_back(m_referenceKeyframe);
+    std::map<SRef<Keyframe>,int> m=m_connectivityMap[m_referenceKeyframe];
+    std::vector<std::pair<SRef<Keyframe>,int>> tab;
+    for(auto p:m){
+        tab.push_back(std::make_pair(p.first,p.second));
+    }
 
-//    std::map<SRef<Keyframe>,int> m=m_connectivityMap[m_referenceKeyframe];
-//    auto id0=m_referenceKeyframe->m_idx;
-//    for(auto k:m){
-//        auto id1=k.first->m_idx;
-//        std::cout << " " << id0  << " " << id1 << " : " << k.second << "\n";
-//        keyframes.push_back(k.first);
-//    }
-
+    std::sort(tab.begin(),tab.end(),sortByNumbers);
+    int max=tab[0].second;
 
     auto id0=m_referenceKeyframe->m_idx;
     selectedKeyframes.push_back(id0);
-    std::map<SRef<Keyframe>,int> m=m_connectivityMap[m_referenceKeyframe];
-    for(auto k:m){
+    for(auto k:tab){
+        if(k.second<max/4)
+            break;
         auto id1=k.first->m_idx;
         std::cout << " " << id0  << " " << id1 << " : " << k.second << "\n";
         selectedKeyframes.push_back(id1);
