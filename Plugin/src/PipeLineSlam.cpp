@@ -656,8 +656,8 @@ void PipelineSlam::processFrames(){
 
         // If the camera has moved enough, create a keyframe and map the scene
 
-        if ( m_keyFrameDetectionOn &&  (newFrame->getReferenceKeyframe()->getVisibleMapPoints().size()*0.8f > foundMatches.size()) ){
-//          if ( m_keyFrameDetectionOn &&  m_keyframeSelector->select(newFrame, foundMatches) ){
+//        if ( m_keyFrameDetectionOn &&  (newFrame->getReferenceKeyframe()->getVisibleMapPoints().size()*0.8f > foundMatches.size()) ){
+        if ( m_keyFrameDetectionOn &&  m_keyframeSelector->select(newFrame, foundMatches) ){
             m_keyFrameDetectionOn=false;
             LOG_INFO("New key Frame ")
             SRef<Keyframe> newKeyframe = xpcf::utils::make_shared<Keyframe>(newFrame);
