@@ -677,6 +677,8 @@ void PipelineSlam::processFrames(){
             m_mapper->update(m_map, newKeyframe, filteredCloud, foundMatches, remainingMatches);
 
             // update connectivity map
+            (m_connectivityMap[newKeyframe])[m_referenceKeyframe]+=foundMatches.size();
+            (m_connectivityMap[m_referenceKeyframe])[newKeyframe]+=foundMatches.size();
             addToConnectivityMap(filteredCloud,newKeyframe->m_idx);
 
             // the 3D points in common with the connected keyFrames
