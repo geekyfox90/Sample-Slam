@@ -948,6 +948,7 @@ double PipelineSlam::getReprojectionError(SRef<Keyframe> keyFrame, bool fromClou
     return sqrt(r/i);
 }
 
+bool sortByNumbers(const std::pair<SRef<Keyframe>,int> &lhs, const std::pair<SRef<Keyframe>,int> &rhs);
 bool PipelineSlam::doLocalBundleAdjustment(){
 
     // get reference keyframe and connected keyframes
