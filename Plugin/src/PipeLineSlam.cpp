@@ -817,6 +817,8 @@ FrameworkReturnCode PipelineSlam::stop()
     m_stopFlag=true;
     m_camera->stop();
 
+    LOG_INFO("\nnb of key frames   : {},", m_keyFrames.size());
+    LOG_INFO("nb of point clouds :{}\n", m_map->getPointCloud()->size());
 #if ONE_THREAD
     if (m_taskAll != nullptr)
             m_taskAll->stop();
