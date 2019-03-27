@@ -61,6 +61,15 @@ PipelineSlam::PipelineSlam():ConfigurableBase(xpcf::toUUID<PipelineSlam>())
     m_firstImageCaptured = false;
     m_keyFrameDetectionOn = true;
     m_isLostTrack = false;
+
+    m_taskGetCameraImages = nullptr;
+    m_taskDetectFiducialMarker = nullptr;
+    m_taskDoBootStrap = nullptr;
+    m_taskGetKeyPoints = nullptr;
+    m_taskGetDescriptors = nullptr;
+    m_taskProcessFrames = nullptr;
+    m_taskDoTriangulation = nullptr;
+    m_taskMapUpdate = nullptr;
 }
 
 
