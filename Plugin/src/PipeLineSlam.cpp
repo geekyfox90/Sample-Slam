@@ -311,6 +311,8 @@ void PipelineSlam::doBootStrap()
     std::vector<SRef<Keypoint>>                         keypointsView2;
     SRef<DescriptorBuffer>                              descriptorsView2;
     std::vector<SRef<CloudPoint>>                       cloud, filteredCloud;
+    std::vector<DescriptorMatch>                        matches;
+
 
     if (m_stopFlag || !m_initOK || !m_startedOK)
         return ;
@@ -759,17 +761,17 @@ FrameworkReturnCode PipelineSlam::start(void* imageDataBuffer)
     m_taskDoBootStrap = new xpcf::DelegateTask(doBootStrapThread);
     m_taskGetKeyPoints = new xpcf::DelegateTask(getKeyPointsThread);
     m_taskGetDescriptors = new xpcf::DelegateTask(getDescriptorsThread);
-    m_taskProcessFrames = new xpcf::DelegateTask(processFramesThread);
-    m_taskDoTriangulation = new xpcf::DelegateTask(doTriangulationThread);
-    m_taskMapUpdate = new xpcf::DelegateTask(mapUpdateThread);
+//    m_taskProcessFrames = new xpcf::DelegateTask(processFramesThread);
+//    m_taskDoTriangulation = new xpcf::DelegateTask(doTriangulationThread);
+//    m_taskMapUpdate = new xpcf::DelegateTask(mapUpdateThread);
 
     m_taskGetCameraImages->start();
     m_taskDetectFiducialMarker->start();
     m_taskDoBootStrap ->start();
     m_taskGetKeyPoints->start();
     m_taskGetDescriptors->start();
-    m_taskProcessFrames ->start();
-    m_taskDoTriangulation->start();
+//    m_taskProcessFrames ->start();
+//    m_taskDoTriangulation->start();
 //    m_taskMapUpdate->start();
 #endif
 

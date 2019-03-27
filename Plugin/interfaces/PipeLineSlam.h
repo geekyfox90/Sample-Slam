@@ -189,7 +189,6 @@ private:
     SRef<Keyframe>                                      keyframe1;
     std::vector<SRef<Keypoint>>                         keypointsView1;
     SRef<DescriptorBuffer>                              descriptorsView1;
-    std::vector<DescriptorMatch>                        matches;
 
 
     SRef<Keyframe>                                      m_referenceKeyframe;
