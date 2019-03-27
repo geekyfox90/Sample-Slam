@@ -592,7 +592,7 @@ void PipelineSlam::processFrames(){
 
      std::vector<std::tuple<SRef<CloudPoint>,SRef<Keyframe>,int>> newMatches;
 
-
+     bool refKeyFrameHasChanged=false;
      if (m_PnP->estimate(pt2d, pt3d, imagePoints_inliers, worldPoints_inliers, m_pose , m_lastPose) == FrameworkReturnCode::_SUCCESS){
 
             LOG_INFO(" pnp inliers size: {} / {} ==> {}%",worldPoints_inliers.size(), pt3d.size(),100.f*worldPoints_inliers.size()/pt3d.size());
@@ -610,7 +610,7 @@ void PipelineSlam::processFrames(){
         // update new frame
         newFrame->setPose(m_pose);
         // update last frame
-//        m_frameToTrack = newFrame;
+        m_frameToTrack = newFrame;
 
         SRef<Keyframe> bestKF=selectReferenceKeyFrame(tab);
 
@@ -633,6 +633,7 @@ void PipelineSlam::processFrames(){
 #endif
         if(bestKF!=nullptr){
             if(bestKF!=m_referenceKeyframe){
+                refKeyFrameHasChanged=true;
                 m_referenceKeyframe = bestKF;
                 m_frameToTrack = xpcf::utils::make_shared<Frame>(m_referenceKeyframe);
                 m_frameToTrack->setReferenceKeyframe(m_referenceKeyframe);
@@ -655,9 +656,12 @@ void PipelineSlam::processFrames(){
 #endif
 
         // If the camera has moved enough, create a keyframe and map the scene
+        bool flag= m_keyFrameDetectionOn;
+        flag=flag && !refKeyFrameHasChanged;
+        flag=flag && m_keyframeSelector->select(newFrame, foundMatches);
+//        flag=flag && (m_referenceKeyframe->getVisibleMapPoints().size()*0.8f < (newMatches.size()+foundMatches.size()));
 
-//        if ( m_keyFrameDetectionOn &&  (newFrame->getReferenceKeyframe()->getVisibleMapPoints().size()*0.8f > foundMatches.size()) ){
-        if ( m_keyFrameDetectionOn &&  m_keyframeSelector->select(newFrame, foundMatches) ){
+        if (flag ){
             m_keyFrameDetectionOn=false;
             LOG_INFO("New key Frame ")
             SRef<Keyframe> newKeyframe = xpcf::utils::make_shared<Keyframe>(newFrame);
