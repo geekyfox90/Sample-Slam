@@ -264,9 +264,20 @@ private:
     xpcf::DropBuffer< SRef<Image> >  m_CameraImagesBuffer;
     xpcf::DropBuffer< std::pair< SRef<Image>,std::vector<SRef<Keypoint>> > > m_outBufferKeypoints;
     xpcf::DropBuffer< SRef<Frame > > m_outBufferDescriptors;
-    xpcf::DropBuffer< std::tuple<SRef<Keyframe>, SRef<Keyframe>, std::vector<DescriptorMatch>, std::vector<DescriptorMatch>, std::vector<SRef<CloudPoint>>  > >  m_outBufferTriangulation;
-     xpcf::DropBuffer< std::tuple<SRef<Keyframe>,SRef<Keyframe>,std::vector<DescriptorMatch>,std::vector<DescriptorMatch> > >  m_keyFrameBuffer;
-    //xpcf::DropBuffer< std::tuple<SRef<Frame>,SRef<Keyframe>,std::vector<DescriptorMatch>,std::vector<DescriptorMatch> > >  m_keyFrameBuffer;
+
+    xpcf::DropBuffer< std::tuple<SRef<Keyframe>,
+                      SRef<Keyframe>,
+                      std::vector<DescriptorMatch>,
+                      std::vector<DescriptorMatch>,
+                      std::vector<SRef<CloudPoint>>,
+                      std::vector<std::tuple<SRef<CloudPoint>,SRef<Keyframe>,int>> > >  m_outBufferTriangulation;
+
+    xpcf::DropBuffer< std::tuple<SRef<Keyframe>,
+                      SRef<Keyframe>,
+                      std::vector<DescriptorMatch>,
+                      std::vector<DescriptorMatch>,
+                      std::vector<std::tuple<SRef<CloudPoint>,SRef<Keyframe>,int>> > >  m_keyFrameBuffer;
+
     xpcf::DropBuffer< SRef<Image> > m_displayMatches;   // matches images should be displayed in the main thread
     xpcf::DropBuffer< SRef<Keyframe>> m_keyframeRelocBuffer;
 

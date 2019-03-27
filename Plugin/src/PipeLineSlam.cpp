@@ -339,9 +339,11 @@ void PipelineSlam::doBootStrap()
              LOG_INFO("Estimate pose of the camera for the frame 2: \n {}", poseFrame2.matrix());
 
              keyframe2=xpcf::utils::make_shared<Keyframe>(frame2);
+             m_referenceKeyframe=keyframe2->getReferenceKeyframe();
              m_keyFrames.push_back(keyframe2);
              std::vector<DescriptorMatch> emptyMatches;
-             m_keyFrameBuffer.push(std::make_tuple(keyframe2,keyframe1,emptyMatches,matches));
+             std::vector<std::tuple<SRef<CloudPoint>,SRef<Keyframe>,int>> newMatchesEmpty;
+             m_keyFrameBuffer.push(std::make_tuple(keyframe2,keyframe1,emptyMatches,matches,newMatchesEmpty));
 
              m_bootstrapOk = true;
              LOG_INFO("BootStrap is validated \n");
@@ -404,10 +406,11 @@ void PipelineSlam::getDescriptors(){
 // - the Map is updated accordingly
 //
 void PipelineSlam::mapUpdate(){
-    std::tuple<SRef<Keyframe>, SRef<Keyframe>, std::vector<DescriptorMatch>, std::vector<DescriptorMatch>, std::vector<SRef<CloudPoint>>  >   element;
+    std::tuple<SRef<Keyframe>, SRef<Keyframe>, std::vector<DescriptorMatch>, std::vector<DescriptorMatch>, std::vector<SRef<CloudPoint>>,std::vector<std::tuple<SRef<CloudPoint>,SRef<Keyframe>,int>>  >   element;
     std::vector<DescriptorMatch>                        foundMatches, remainingMatches;
     std::vector<SRef<CloudPoint>>                       newCloud;
     std::vector<SRef<CloudPoint>>                       filteredCloud;
+    std::vector<std::tuple<SRef<CloudPoint>,SRef<Keyframe>,int>> newMatches;
 
     if (m_stopFlag || !m_initOK || !m_startedOK)
         return ;
@@ -425,7 +428,7 @@ void PipelineSlam::mapUpdate(){
     foundMatches=std::get<2>(element);
     remainingMatches=std::get<3>(element);
     newCloud=std::get<4>(element);
-
+    newMatches=std::get<5>(element);
 
     std::map<unsigned int, unsigned int> visibleKeypoints= newKeyframe->getReferenceKeyframe()->getVisibleKeypoints();
 
@@ -436,7 +439,25 @@ void PipelineSlam::mapUpdate(){
 
     m_mapper->update(m_map, newKeyframe, filteredCloud, foundMatches, remainingMatches);
 
+    (m_connectivityMap[newKeyframe])[m_referenceKeyframe]+=foundMatches.size();
+    (m_connectivityMap[m_referenceKeyframe])[newKeyframe]+=foundMatches.size();
     addToConnectivityMap(filteredCloud,newKeyframe->m_idx);
+
+    // the 3D points in common with the connected keyFrames
+    std::map<unsigned int, SRef<CloudPoint>> visibility,visibilityKF;
+    visibilityKF=newKeyframe->getVisibleMapPoints();
+    for(auto nm:newMatches){
+        SRef<CloudPoint> cp=std::get<0>(nm);
+        SRef<Keyframe> kf=std::get<1>(nm);
+        int kpId=std::get<2>(nm);
+        if(visibility.find(kpId)==visibility.end() && visibilityKF.find(kpId)==visibilityKF.end()){
+           visibility[kpId]=cp;
+            cp->visibilityAddKeypoint(newKeyframe->m_idx,kpId);
+            (m_connectivityMap[newKeyframe])[kf]++;
+            (m_connectivityMap[kf])[newKeyframe]++;
+        }
+    }
+    newKeyframe->addVisibleMapPoints(visibility);
 
     m_referenceKeyframe = newKeyframe;
     m_frameToTrack = xpcf::utils::make_shared<Frame>(m_referenceKeyframe);
@@ -448,12 +469,8 @@ void PipelineSlam::mapUpdate(){
 
     for (auto kf:m_keyFrames){
             double er1=getReprojectionError(kf);
-            std::cout << "kf id : " << kf->m_idx << " reproj err : " << er1 << "\n";
-    }
-
-    for (auto kf:m_keyFrames){
-            double er1=getReprojectionError(kf,true);
-            std::cout << "kf id : " << kf->m_idx << " reproj err : " << er1 << "\n";
+            double er2=getReprojectionError(kf,true);
+            std::cout << "kf id : " << kf->m_idx << " reproj err : " << er1 << " " << er2 << "\n";
     }
 
     doLocalBundleAdjustment();
@@ -473,13 +490,14 @@ void PipelineSlam::mapUpdate(){
 // - the resulting cloud will be used to update the Map
 //
 void PipelineSlam::doTriangulation(){
-    std::tuple<SRef<Keyframe>,SRef<Keyframe>,std::vector<DescriptorMatch>,std::vector<DescriptorMatch> > element;
+    std::tuple<SRef<Keyframe>,SRef<Keyframe>,std::vector<DescriptorMatch>,std::vector<DescriptorMatch>,std::vector<std::tuple<SRef<CloudPoint>,SRef<Keyframe>,int>> > element;
     SRef<Frame>                                         newFrame;
     SRef<Keyframe>                                      newKeyframe;
     SRef<Keyframe>                                      refKeyFrame;
     std::vector<DescriptorMatch>                        foundMatches;
     std::vector<DescriptorMatch>                        remainingMatches;
     std::vector<SRef<CloudPoint>>                       newCloud;
+    std::vector<std::tuple<SRef<CloudPoint>,SRef<Keyframe>,int>> newMatches;
 
     if (m_stopFlag || !m_initOK || !m_startedOK)
         return ;
@@ -496,12 +514,13 @@ void PipelineSlam::doTriangulation(){
     refKeyFrame=std::get<1>(element);
     foundMatches=std::get<2>(element);
     remainingMatches=std::get<3>(element);
+    newMatches=std::get<4>(element);
 
     if(remainingMatches.size())
             m_triangulator->triangulate(newKeyframe, remainingMatches, newCloud);
 
     if(m_outBufferTriangulation.empty())
-        m_outBufferTriangulation.push(std::make_tuple(newKeyframe,refKeyFrame,foundMatches,remainingMatches,newCloud));
+        m_outBufferTriangulation.push(std::make_tuple(newKeyframe,refKeyFrame,foundMatches,remainingMatches,newCloud,newMatches));
 
     return;
 };
@@ -548,12 +567,6 @@ void PipelineSlam::processFrames(){
 
      if (m_isLostTrack && !m_outBufferTriangulation.empty() && !m_keyFrameBuffer.empty())
          return;
-
-     // test if a triangulation has been performed on a previously keyframe candidate
-     if(!m_outBufferTriangulation.empty()){
-         //if so update the map
-         mapUpdate();
-     }
 
      /*compute matches between reference image and camera image*/
      if(!m_outBufferDescriptors.tryPop(newFrame)){
@@ -640,9 +653,6 @@ void PipelineSlam::processFrames(){
                 m_lastPose = m_referenceKeyframe->getPose();
             }
         }
-
-
-
 #if 1
                 SRef<std::vector<SRef<CloudPoint>>> cloud;
                 std::vector<SRef<Point2Df>> point2D;
@@ -663,70 +673,14 @@ void PipelineSlam::processFrames(){
 
         if (flag ){
             m_keyFrameDetectionOn=false;
+
             LOG_INFO("New key Frame ")
             SRef<Keyframe> newKeyframe = xpcf::utils::make_shared<Keyframe>(newFrame);
             m_keyFrames.push_back(newKeyframe);
             LOG_INFO("# of keyFrames : {}",m_keyFrames.size());
 
-
-            // triangulate the remaining matches
-            std::vector<SRef<CloudPoint>> newCloud;
-            if(remainingMatches.size())
-                m_triangulator->triangulate(newKeyframe, remainingMatches, newCloud);
-
-            std::vector<SRef<CloudPoint>> filteredCloud;
-
-            m_mapFilter->filter(newKeyframe->getReferenceKeyframe()->getPose(), newKeyframe->getPose(), newCloud, filteredCloud);
-
-            m_mapper->update(m_map, newKeyframe, filteredCloud, foundMatches, remainingMatches);
-
-            // update connectivity map
-            (m_connectivityMap[newKeyframe])[m_referenceKeyframe]+=foundMatches.size();
-            (m_connectivityMap[m_referenceKeyframe])[newKeyframe]+=foundMatches.size();
-            addToConnectivityMap(filteredCloud,newKeyframe->m_idx);
-
-            // the 3D points in common with the connected keyFrames
-            std::map<unsigned int, SRef<CloudPoint>> visibility,visibilityKF;
-            foundPoints.clear();
-            visibilityKF=newKeyframe->getVisibleMapPoints();
-            for(auto nm:newMatches){
-                SRef<CloudPoint> cp=std::get<0>(nm);
-                SRef<Keyframe> kf=std::get<1>(nm);
-                int kpId=std::get<2>(nm);
-                if(visibility.find(kpId)==visibility.end() && visibilityKF.find(kpId)==visibilityKF.end()){
-                    foundPoints.push_back(cp);
-                    visibility[kpId]=cp;
-                    cp->visibilityAddKeypoint(newKeyframe->m_idx,kpId);
-                    (m_connectivityMap[newKeyframe])[kf]++;
-                    (m_connectivityMap[kf])[newKeyframe]++;
-                }
-            }
-
-            newKeyframe->addVisibleMapPoints(visibility);
-
-            m_referenceKeyframe = newKeyframe;
-            m_frameToTrack = xpcf::utils::make_shared<Frame>(m_referenceKeyframe);
-            m_frameToTrack->setReferenceKeyframe(m_referenceKeyframe);
-            m_kfRetriever->addKeyframe(m_referenceKeyframe); // add keyframe for reloc
-            m_keyframePoses.push_back(newKeyframe->getPose());
-
-            LOG_DEBUG(" cloud current size: {} \n", m_map->getPointCloud()->size());
-            std::cout << "nb clound points :" << m_map->getPointCloud()->size() << "\n";
-
-            for (auto kf:m_keyFrames){
-                    double er1=getReprojectionError(kf);
-                    double er2=getReprojectionError(kf,true);
-                    std::cout << "kf id : " <<  kf->m_idx << "\t" << " reproj err : " << er1 << "\t" << er2 << "\n";
-            }
-
-            doLocalBundleAdjustment();
-
-            m_keyFrameDetectionOn = true;					// re - allow keyframe detection
-
-//            getchar();
-
              // fill the thread liaison buffer
- //           m_keyFrameBuffer.push(std::make_tuple(newKeyframe,refKeyFrame,foundMatches,remainingMatches));
+            m_keyFrameBuffer.push(std::make_tuple(newKeyframe,refKeyFrame,foundMatches,remainingMatches,newMatches));
         }
         m_isLostTrack = false;
         m_sink->set(m_pose, camImage);
@@ -897,7 +851,7 @@ void PipelineSlam::allTasks(){
     getDescriptors();
     doTriangulation();
     processFrames();
-//    mapUpdate();
+    mapUpdate();
 }
 
 
@@ -966,6 +920,7 @@ bool PipelineSlam::doLocalBundleAdjustment(){
     CamCalibration  intrinsic = m_camera->getIntrinsicsParameters();
     CamDistortion   distorsion = m_camera->getDistorsionParameters();
 
+    return true;
 
     std::map<SRef<Keyframe>,int> m=m_connectivityMap[m_referenceKeyframe];
     std::vector<std::pair<SRef<Keyframe>,int>> tab;
