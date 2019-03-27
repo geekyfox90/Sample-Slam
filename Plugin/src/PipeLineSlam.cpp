@@ -804,8 +804,8 @@ FrameworkReturnCode PipelineSlam::stop()
         m_taskProcessFrames->stop();
     if (m_taskDoTriangulation != nullptr)
         m_taskDoTriangulation->stop();
-//    if (m_taskMapUpdate != nullptr)
-//        m_taskMapUpdate->stop();
+    if (m_taskMapUpdate != nullptr)
+        m_taskMapUpdate->stop();
 #endif
 
      if(!m_initOK)
