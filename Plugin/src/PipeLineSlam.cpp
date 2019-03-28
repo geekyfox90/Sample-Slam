@@ -183,6 +183,9 @@ FrameworkReturnCode PipelineSlam::init(SRef<xpcf::IComponentManager> xpcfCompone
 void PipelineSlam::getCameraImages(){
 
     SRef<Image> view;
+    if(!m_CameraImagesBuffer.empty())
+        return;
+
     if (m_stopFlag || !m_initOK || !m_startedOK)
         return;
     if (m_camera->getNextImage(view) == SolAR::FrameworkReturnCode::_ERROR_LOAD_IMAGE) {
