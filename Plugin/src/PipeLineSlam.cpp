@@ -981,7 +981,7 @@ bool PipelineSlam::accepMatch(const SRef<Keyframe> kf, const SRef<CloudPoint> cl
     int size=61;
     float distanceRatio=0.75;
 
-    if(dists[0] > 10 || (dists[0]>0.8*dists[1])){
+    if(dists[0] > 10 || (dists[0]>distanceRatio*dists[1])){
         return false;
     }
 
