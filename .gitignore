@@ -361,3 +361,10 @@ mydata/medium/medium_00023.png
 mydata/medium/medium_00017.png
 mydata/medium/medium_00016.png
 mydata/high/high_00025.png
+Multi/surf.fbow
+Multi/orb.fbow
+Multi/akaze.fbow
+Mono/surf.fbow
+Mono/orb.fbow
+Mono/fbow_voc.zip
+Mono/akaze.fbow

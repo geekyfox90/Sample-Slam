@@ -50,7 +50,7 @@
 #include "api/solver/map/IKeyframeSelector.h"
 #include "api/solver/map/IMapFilter.h"
 #include "api/solver/pose/I2D3DCorrespondencesFinder.h"
-#include "api/solver/pose/I3DTransformFinderFrom2D3D.h"
+#include "api/solver/pose/I3DTransformSACFinderFrom2D3D.h"
 #include "api/features/IMatchesFilter.h"
 #include "api/display/I2DOverlay.h"
 #include "api/display/IMatchesOverlay.h"
@@ -58,6 +58,7 @@
 #include "api/display/IImageViewer.h"
 #include "api/display/I3DPointsViewer.h"
 #include "api/reloc/IKeyframeRetriever.h"
+#include "core/Log.h"
 
 using namespace SolAR;
 using namespace SolAR::datastructure;
@@ -115,7 +116,7 @@ int main(int argc, char **argv){
     SRef<solver::pose::I3DTransformFinderFrom2D2D> poseFinderFrom2D2D =xpcfComponentManager->create<SolARPoseFinderFrom2D2DOpencv>()->bindTo<solver::pose::I3DTransformFinderFrom2D2D>();
     SRef<solver::map::ITriangulator> triangulator =xpcfComponentManager->create<SolARSVDTriangulationOpencv>()->bindTo<solver::map::ITriangulator>();
     SRef<features::IMatchesFilter> matchesFilter =xpcfComponentManager->create<SolARGeometricMatchesFilterOpencv>()->bindTo<features::IMatchesFilter>();
-    SRef<solver::pose::I3DTransformFinderFrom2D3D> PnP =xpcfComponentManager->create<SolARPoseEstimationPnpOpencv>()->bindTo<solver::pose::I3DTransformFinderFrom2D3D>();
+    SRef<solver::pose::I3DTransformSACFinderFrom2D3D> PnP =xpcfComponentManager->create<SolARPoseEstimationSACPnpOpencv>()->bindTo<solver::pose::I3DTransformSACFinderFrom2D3D>();
     SRef<solver::pose::I2D3DCorrespondencesFinder> corr2D3DFinder =xpcfComponentManager->create<SolAR2D3DCorrespondencesFinderOpencv>()->bindTo<solver::pose::I2D3DCorrespondencesFinder>();
     SRef<solver::map::IMapFilter> mapFilter =xpcfComponentManager->create<SolARMapFilter>()->bindTo<solver::map::IMapFilter>();
     SRef<solver::map::IMapper> mapper =xpcfComponentManager->create<SolARMapper>()->bindTo<solver::map::IMapper>();
@@ -337,7 +338,7 @@ int main(int argc, char **argv){
         LOG_DEBUG("Number of matches: {}, number of 3D points:{}", remainingMatches.size(), newCloud.size());
         //newKeyframe = xpcf::utils::make_shared<Keyframe>(newFrame);
         mapFilter->filter(refKeyframe->getPose(), newKeyframe->getPose(), newCloud, filteredCloud);
-        mapper->update(map, newKeyframe, filteredCloud, foundMatches, remainingMatches);
+        mapper->update(map, newKeyframe, filteredCloud, remainingMatches, foundMatches);
         referenceKeyframe = newKeyframe;
         frameToTrack = xpcf::utils::make_shared<Frame>(referenceKeyframe);
         frameToTrack->setReferenceKeyframe(referenceKeyframe);
