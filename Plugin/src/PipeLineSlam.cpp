@@ -83,8 +83,9 @@ FrameworkReturnCode PipelineSlam::init(SRef<xpcf::IComponentManager> xpcfCompone
     // component creation
 //   #ifdef USE_IMAGES_SET
 //       m_camera = xpcfComponentManager->create<MODULES::OPENCV::SolARImagesAsCameraOpencv>()->bindTo<input::devices::ICamera>();
+    try {
     #ifdef VIDEO_INPUT
-       m_camera = xpcfComponentManager->create<MODULES::OPENCV::SolARVideoAsCameraOpencv>()->bindTo<input::devices::ICamera>();
+      m_camera = xpcfComponentManager->create<MODULES::OPENCV::SolARVideoAsCameraOpencv>()->bindTo<input::devices::ICamera>();
    #else
        m_camera =xpcfComponentManager->create<MODULES::OPENCV::SolARCameraOpencv>()->bindTo<input::devices::ICamera>();
    #endif
@@ -146,33 +147,62 @@ FrameworkReturnCode PipelineSlam::init(SRef<xpcf::IComponentManager> xpcfCompone
     }
     LOG_INFO("MARKER IMAGE LOADED");
 
-    m_patternDescriptorExtractor->extract(m_binaryMarker->getPattern(), m_markerPatternDescriptor);
-    LOG_INFO ("Marker pattern:\n {}", m_binaryMarker->getPattern()->getPatternMatrix())
 
-    int patternSize = m_binaryMarker->getPattern()->getSize();
+        // init relative to fiducial marker detection (will define the start of the process)
+        m_binaryMarker =xpcfComponentManager->create<MODULES::OPENCV::SolARMarker2DSquaredBinaryOpencv>()->bindTo<input::files::IMarker2DSquaredBinary>();
+        m_imageFilterBinary =xpcfComponentManager->create<MODULES::OPENCV::SolARImageFilterBinaryOpencv>()->bindTo<image::IImageFilter>();
+        m_imageConvertor =xpcfComponentManager->create<MODULES::OPENCV::SolARImageConvertorOpencv>()->bindTo<image::IImageConvertor>();
+        m_contoursExtractor =xpcfComponentManager->create<MODULES::OPENCV::SolARContoursExtractorOpencv>()->bindTo<features::IContoursExtractor>();
+        m_contoursFilter =xpcfComponentManager->create<MODULES::OPENCV::SolARContoursFilterBinaryMarkerOpencv>()->bindTo<features::IContoursFilter>();
+        m_perspectiveController =xpcfComponentManager->create<MODULES::OPENCV::SolARPerspectiveControllerOpencv>()->bindTo<image::IPerspectiveController>();
+        m_projector = xpcfComponentManager->create<MODULES::OPENCV::SolARProjectOpencv>()->bindTo<geom::IProject>();
+        m_patternDescriptorExtractor =xpcfComponentManager->create<MODULES::OPENCV::SolARDescriptorsExtractorSBPatternOpencv>()->bindTo<features::IDescriptorsExtractorSBPattern>();
+        m_patternMatcher =xpcfComponentManager->create<MODULES::OPENCV::SolARDescriptorMatcherRadiusOpencv>()->bindTo<features::IDescriptorMatcher>();
+        m_patternReIndexer = xpcfComponentManager->create<MODULES::TOOLS::SolARSBPatternReIndexer>()->bindTo<features::ISBPatternReIndexer>();
+        m_img2worldMapper = xpcfComponentManager->create<MODULES::TOOLS::SolARImage2WorldMapper4Marker2D>()->bindTo<geom::IImage2WorldMapper>();
 
-    m_patternDescriptorExtractor->bindTo<xpcf::IConfigurable>()->getProperty("patternSize")->setIntegerValue(patternSize);
-    m_patternReIndexer->bindTo<xpcf::IConfigurable>()->getProperty("sbPatternSize")->setIntegerValue(patternSize);
+        // load marker
+        LOG_INFO("LOAD MARKER IMAGE ");
+       if( m_binaryMarker->loadMarker()==FrameworkReturnCode::_ERROR_){
+           return FrameworkReturnCode::_ERROR_;
+        }
+        LOG_INFO("MARKER IMAGE LOADED");
 
-    m_img2worldMapper->bindTo<xpcf::IConfigurable>()->getProperty("digitalWidth")->setIntegerValue(patternSize);
-    m_img2worldMapper->bindTo<xpcf::IConfigurable>()->getProperty("digitalHeight")->setIntegerValue(patternSize);
-    m_img2worldMapper->bindTo<xpcf::IConfigurable>()->getProperty("worldWidth")->setFloatingValue(m_binaryMarker->getSize().width);
-    m_img2worldMapper->bindTo<xpcf::IConfigurable>()->getProperty("worldHeight")->setFloatingValue(m_binaryMarker->getSize().height);
+        m_patternDescriptorExtractor->extract(m_binaryMarker->getPattern(), m_markerPatternDescriptor);
+        LOG_INFO ("Marker pattern:\n {}", m_binaryMarker->getPattern()->getPatternMatrix())
+
+        int patternSize = m_binaryMarker->getPattern()->getSize();
+
+        m_patternDescriptorExtractor->bindTo<xpcf::IConfigurable>()->getProperty("patternSize")->setIntegerValue(patternSize);
+        m_patternReIndexer->bindTo<xpcf::IConfigurable>()->getProperty("sbPatternSize")->setIntegerValue(patternSize);
+
+        m_img2worldMapper->bindTo<xpcf::IConfigurable>()->getProperty("digitalWidth")->setIntegerValue(patternSize);
+        m_img2worldMapper->bindTo<xpcf::IConfigurable>()->getProperty("digitalHeight")->setIntegerValue(patternSize);
+        m_img2worldMapper->bindTo<xpcf::IConfigurable>()->getProperty("worldWidth")->setFloatingValue(m_binaryMarker->getSize().width);
+        m_img2worldMapper->bindTo<xpcf::IConfigurable>()->getProperty("worldHeight")->setFloatingValue(m_binaryMarker->getSize().height);
 
 
+        // specific to the
+        // initialize pose estimation with the camera intrinsic parameters (please refeer to the use of intrinsec parameters file)
+        m_PnP_FIM->setCameraParameters(m_camera->getIntrinsicsParameters(), m_camera->getDistorsionParameters());
+        m_PnP->setCameraParameters(m_camera->getIntrinsicsParameters(), m_camera->getDistorsionParameters());
+        m_poseFinderFrom2D2D->setCameraParameters(m_camera->getIntrinsicsParameters(), m_camera->getDistorsionParameters());
+        m_triangulator->setCameraParameters(m_camera->getIntrinsicsParameters(), m_camera->getDistorsionParameters());
 
-    // specific to the
-    // initialize pose estimation with the camera intrinsic parameters (please refeer to the use of intrinsec parameters file)
-    m_PnP_FIM->setCameraParameters(m_camera->getIntrinsicsParameters(), m_camera->getDistorsionParameters());
-    m_PnP->setCameraParameters(m_camera->getIntrinsicsParameters(), m_camera->getDistorsionParameters());
-    m_poseFinderFrom2D2D->setCameraParameters(m_camera->getIntrinsicsParameters(), m_camera->getDistorsionParameters());
-    m_triangulator->setCameraParameters(m_camera->getIntrinsicsParameters(), m_camera->getDistorsionParameters());
+            // specific to the
+            // initialize components requiring the camera intrinsic and distortion parameters
+        m_projector->setCameraParameters(m_camera->getIntrinsicsParameters(), m_camera->getDistorsionParameters());
 
+        m_i2DOverlay = xpcf::ComponentFactory::createInstance<SolAR2DOverlayOpencv>()->bindTo<api::display::I2DOverlay>();
+        m_i2DOverlay->bindTo<xpcf::IConfigurable>()->getProperty("radius")->setUnsignedIntegerValue(1);
 
-    m_i2DOverlay = xpcf::ComponentFactory::createInstance<SolAR2DOverlayOpencv>()->bindTo<api::display::I2DOverlay>();
-    m_i2DOverlay->bindTo<xpcf::IConfigurable>()->getProperty("radius")->setUnsignedIntegerValue(1);
-
-    m_initOK = true;
+        m_initOK = true;
+    }
+    catch (xpcf::Exception e)
+    {
+        LOG_ERROR("Exception catched: {}", e.what());
+        return FrameworkReturnCode::_ERROR_;
+    }
 
     return FrameworkReturnCode::_SUCCESS;
 }
@@ -495,10 +525,6 @@ void PipelineSlam::mapUpdate(){
 
 };
 
-
-
-
-
 // A new keyFrame has been detected :
 // - perform triangulation
 // - the resulting cloud will be used to update the Map
@@ -633,6 +659,11 @@ void PipelineSlam::processFrames(){
 
 
         m_lastPose = m_pose;
+        std::vector<SRef<Point2Df>> point2D;
+        SRef<std::vector<SRef<CloudPoint>>> cloud;
+        cloud=m_map->getPointCloud();
+        m_projector->project(*cloud, point2D, m_pose);
+        m_i2DOverlay->drawCircles(point2D,camImage);
 
         // update new frame
         newFrame->setPose(m_pose);
@@ -668,8 +699,6 @@ void PipelineSlam::processFrames(){
             }
         }
 #if 1
-                SRef<std::vector<SRef<CloudPoint>>> cloud;
-                std::vector<SRef<Point2Df>> point2D;
                 cloud=m_map->getPointCloud();
                 project3Dpoints(m_pose, *cloud,point2D);
                 m_i2DOverlay->bindTo<xpcf::IConfigurable>()->getProperty("color")->setUnsignedIntegerValue(0,0);
@@ -721,11 +750,7 @@ void PipelineSlam::processFrames(){
      return;
 };
 
-#ifdef USE_OPENGL
-FrameworkReturnCode PipelineSlam::start(void* textureHandle)
-#else
 FrameworkReturnCode PipelineSlam::start(void* imageDataBuffer)
-#endif
 {
     if (m_initOK==false)
     {
@@ -733,11 +758,9 @@ FrameworkReturnCode PipelineSlam::start(void* imageDataBuffer)
         return FrameworkReturnCode::_ERROR_;
     }
     m_stopFlag=false;
-#ifdef USE_OPENGL
-    m_sink->setTextureBuffer(textureHandle);
-#else
+
     m_sink->setImageBuffer((unsigned char*)imageDataBuffer);
-#endif
+
     if (m_camera->start() != FrameworkReturnCode::_SUCCESS)
     {
         LOG_ERROR("Camera cannot start")
@@ -857,6 +880,8 @@ CameraParameters PipelineSlam::getCameraParameters()
         camParam.height = resolution.height;
         camParam.focalX = calib(0,0);
         camParam.focalY = calib(1,1);
+        camParam.centerX = calib(0,2);
+        camParam.centerY = calib(1,2);
     }
     return camParam;
 }

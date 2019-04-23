@@ -58,6 +58,7 @@
 #include "api/features/IKeypointsReIndexer.h"
 #include "api/geom/IImage2WorldMapper.h"
 #include "api/geom/I2DTransform.h"
+#include "api/geom/IProject.h"
 #include "api/features/IMatchesFilter.h"
 
 #include "api/solver/map/IBundler.h"
@@ -131,6 +132,7 @@ private:
     SRef<solver::pose::I3DTransformFinderFrom2D3D> m_PnP_FIM;
     SRef<solver::pose::I3DTransformSACFinderFrom2D3D> m_PnP;
     SRef<solver::pose::I2D3DCorrespondencesFinder> m_corr2D3DFinder;
+    SRef<geom::IProject> m_projector;
     SRef<solver::map::IMapFilter> m_mapFilter;
     SRef<solver::map::IMapper> m_mapper;
     SRef<solver::map::IKeyframeSelector> m_keyframeSelector;
