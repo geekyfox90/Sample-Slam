@@ -110,7 +110,7 @@ int main(){
                     for(int j=0;j<3;j++)
                         s_pose(3,j)=0;
                     s_pose(3,3)=1;
-                    LOG_INFO("pose.matrix():\n {} \n",s_pose.matrix())
+//                    LOG_INFO("pose.matrix():\n {} \n",s_pose.matrix())
                     overlay3DComponent->draw(s_pose, camImage);
                     count++;
                 }
