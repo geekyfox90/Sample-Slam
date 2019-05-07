@@ -641,14 +641,14 @@ void PipelineSlam::processFrames(){
      m_geomMatchesFilter->filter(matches, matches, m_frameToTrack->getKeypoints(), keypoints);
 
      m_corr2D3DFinder->find(m_frameToTrack, newFrame, matches, foundPoints, pt3d, pt2d, foundMatches, remainingMatches);
-     LOG_INFO(" cloud:{} #matches:{} #3D:{} #remain matches : {}",m_map->getPointCloud()->size(),matches.size(), pt3d.size(),remainingMatches.size());
+//     LOG_INFO(" cloud:{} #matches:{} #3D:{} #remain matches : {}",m_map->getPointCloud()->size(),matches.size(), pt3d.size(),remainingMatches.size());
 
      std::vector<std::tuple<SRef<CloudPoint>,SRef<Keyframe>,int>> newMatches;
 
      bool refKeyFrameHasChanged=false;
      if (m_PnP->estimate(pt2d, pt3d, imagePoints_inliers, worldPoints_inliers, m_pose , m_lastPose) == FrameworkReturnCode::_SUCCESS){
 
-            LOG_INFO(" pnp inliers size: {} / {} ==> {}%",worldPoints_inliers.size(), pt3d.size(),100.f*worldPoints_inliers.size()/pt3d.size());
+//            LOG_INFO(" pnp inliers size: {} / {} ==> {}%",worldPoints_inliers.size(), pt3d.size(),100.f*worldPoints_inliers.size()/pt3d.size());
             std::map<SRef<Keyframe>,int> map = m_connectivityMap[m_referenceKeyframe];
 
             //try to find additional matches with connected Reference keyframes
@@ -1467,7 +1467,7 @@ void PipelineSlam::computeConnectedMatches3(SRef<Frame> newFrame ,
     worldPoints_inliers.clear();
     if (m_PnP->estimate(pt2d, pt3d, imagePoints_inliers, worldPoints_inliers, pose0, m_pose ) == FrameworkReturnCode::_SUCCESS){
         m_pose=pose0;
-        LOG_INFO(" pnp inliers size second pass: {} / {} ==> {}%",worldPoints_inliers.size(), pt3d.size(),100.f*worldPoints_inliers.size()/pt3d.size());
+//        LOG_INFO(" pnp inliers size second pass: {} / {} ==> {}%",worldPoints_inliers.size(), pt3d.size(),100.f*worldPoints_inliers.size()/pt3d.size());
     }
  }
 
