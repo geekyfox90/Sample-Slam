@@ -512,9 +512,9 @@ void PipelineSlam::mapUpdate(){
 
 
     for (auto kf:m_keyFrames){
-            double er1=getReprojectionError(kf);
-            double er2=getReprojectionError(kf,true);
-            std::cout << "kf id : " << kf->m_idx << " reproj err : " << er1 << " " << er2 << "\n";
+            std::pair<double,int> er1=getReprojectionError(kf);
+            std::pair<double,int> er2=getReprojectionError(kf,true);
+            std::cout << "kf id : " << kf->m_idx << " reproj err : " << sqrt(er1.first/er1.second) << " " << sqrt(er2.first/er2.second) << "\n";
     }
 
     doLocalBundleAdjustment();
@@ -899,7 +899,7 @@ void PipelineSlam::allTasks(){
 }
 
 
-double PipelineSlam::getReprojectionError(SRef<Keyframe> keyFrame, bool fromCloud){
+std::pair<double,int> PipelineSlam::getReprojectionError(SRef<Keyframe> keyFrame, bool fromCloud){
     double r;
     Transform3Df pose=keyFrame->getPose();
     std::vector<SRef<CloudPoint>> cloud;
@@ -951,7 +951,32 @@ double PipelineSlam::getReprojectionError(SRef<Keyframe> keyFrame, bool fromClou
 
         r+=dx*dx+dy*dy;
     }
-    return sqrt(r/i);
+    return std::make_pair(r,i);
+}
+
+std::pair<double,int> PipelineSlam::getReprojectionErrorFull(std::vector<int>& selectedKeyframes, bool fromCloud){
+
+    double r=0;
+    int i=0;
+    if(selectedKeyframes.size()){
+        for(auto idx:selectedKeyframes){
+            for(auto kf:m_keyFrames){
+                   if(kf->m_idx==idx){
+                        std::pair<double,int> res=getReprojectionError(kf,fromCloud);
+                        r+=res.first;
+                        i+=res.second;
+                   }
+            }
+        }
+    }
+    else{
+        for(auto kf:m_keyFrames){
+            std::pair<double,int> res=getReprojectionError(kf,fromCloud);
+            r+=res.first;
+            i+=res.second;
+        }
+    }
+    return std::make_pair(0.5*r,i);
 }
 
 bool sortByNumbers(const std::pair<SRef<Keyframe>,int> &lhs, const std::pair<SRef<Keyframe>,int> &rhs);
@@ -986,19 +1011,58 @@ bool PipelineSlam::doLocalBundleAdjustment(){
     }
 
     double reproj_errorFinal  = 0.f;
-    points3d =*m_map->getPointCloud() ;
+    points3d = *(m_map->getPointCloud()) ;
+    std::vector<std::tuple<int,double,int>> err_before,err_after;
+    for(auto kf:m_keyFrames){
+        auto res=getReprojectionError(kf);
+        err_before.push_back(std::make_tuple(kf->m_idx,res.first,res.second));
+//        std::cout << "kf : " << k->m_idx << " reproj error before:" << sqrt(res.first/res.second) << "\n";
+    }
+    std::pair<double,int> resb=getReprojectionErrorFull(selectedKeyframes,false);
+    std::pair<double,int> resbFull=getReprojectionErrorFull(emptySet,false);
+    std::pair<double,int> resb_cloud=getReprojectionErrorFull(selectedKeyframes,true);
+
     reproj_errorFinal = m_bundler->solve(m_keyFrames,
                                        points3d,
                                        intrinsic,
                                        distorsion,
                                        selectedKeyframes);
 
-    std::cout << "reprojection error final: " << reproj_errorFinal << "\n";
+    reproj_errorFinal=sqrt(reproj_errorFinal);
 
-    for(auto k:m_keyFrames){
-        std::cout << "kf : " << k->m_idx << " reproj error :" << getReprojectionError(k) << "\n";
+    for(auto kf:m_keyFrames){
+        auto res=getReprojectionError(kf);
+        err_after.push_back(std::make_tuple(kf->m_idx,res.first,res.second));
     }
 
+    std::pair<double,int> resa=getReprojectionErrorFull(selectedKeyframes,false);
+    std::pair<double,int> resa_cloud=getReprojectionErrorFull(selectedKeyframes,true);
+    std::pair<double,int> resaFull=getReprojectionErrorFull(emptySet,false);
+    std::cout << "reprojection error finale => Ceres: " << reproj_errorFinal << " => pipeline: " << sqrt(resa.first/resa.second) << "\n";
+
+    std::cout << "selected reproj error            before :" << sqrt(resb.first/resb.second)<< " after :" << sqrt(resa.first/resa.second) << "\n";
+    std::cout << "selected reproj error with cloud before :" << sqrt(resb_cloud.first/resb_cloud.second)<< " after :" << sqrt(resa_cloud.first/resa_cloud.second) << "\n";
+    std::cout << "full      reproj error           before :" << sqrt(resbFull.first/resbFull.second) << " after :" << sqrt(resaFull.first/resaFull.second) << "\n";
+
+ //   getchar();
+
+    return true;
+
+    std::cout << "selected reproj error before :" << sqrt(resb.first/resb.second)<< " selectedreproj error after :" << sqrt(resa.first/resa.second) << "\n";
+    std::cout << "full reproj error before :" << resbFull.first<< " full reproj error after :" << resaFull.first << "\n";
+
+
+    for(int i=0;i<err_before.size();i++){
+        auto resb=err_before[i];
+        auto resa=err_after[i];
+        std::cout << "kf : " << std::get<0>(resb) << " before:" << sqrt(std::get<1>(resb)/std::get<2>(resb)) << " after:" << sqrt(std::get<1>(resa)/std::get<2>(resa)) << "\n";
+    }
+
+//    for(auto k:m_keyFrames){
+//        std::cout << "kf : " << k->m_idx << " pose :" << k->getPose().matrix() << "\n";
+//    }
+
+//    getchar();
     return true;
 }
 
