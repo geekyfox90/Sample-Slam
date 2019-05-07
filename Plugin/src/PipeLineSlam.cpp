@@ -984,12 +984,10 @@ bool PipelineSlam::doLocalBundleAdjustment(){
 
     // get reference keyframe and connected keyframes
     std::vector<SRef<Keyframe>>keyframes;
-    std::vector<int>selectedKeyframes;
-    std::vector<SRef<CloudPoint>>points3d;
+    std::vector<int>selectedKeyframes,emptySet;
+    std::vector<SRef<CloudPoint>> points3d;
     CamCalibration  intrinsic = m_camera->getIntrinsicsParameters();
     CamDistortion   distorsion = m_camera->getDistorsionParameters();
-
-    return true;
 
     std::map<SRef<Keyframe>,int> m=m_connectivityMap[m_referenceKeyframe];
     std::vector<std::pair<SRef<Keyframe>,int>> tab;
@@ -1002,6 +1000,7 @@ bool PipelineSlam::doLocalBundleAdjustment(){
 
     auto id0=m_referenceKeyframe->m_idx;
     selectedKeyframes.push_back(id0);
+#if 1
     for(auto k:tab){
         if(k.second<max/4)
             break;
@@ -1009,6 +1008,21 @@ bool PipelineSlam::doLocalBundleAdjustment(){
         std::cout << " " << id0  << " " << id1 << " : " << k.second << "\n";
         selectedKeyframes.push_back(id1);
     }
+#else
+    SRef<Keyframe> kf=m_referenceKeyframe->getReferenceKeyframe();
+    for(int i=0;i<4;i++){
+        id0=kf->m_idx;
+        selectedKeyframes.push_back(id0);
+        kf=kf->getReferenceKeyframe();
+        if(kf==nullptr)
+            break;
+    }
+#endif
+    for(auto idx:selectedKeyframes){
+        std::cout << idx << " " ;
+    }
+    std::cout << "\n" ;
+
 
     double reproj_errorFinal  = 0.f;
     points3d = *(m_map->getPointCloud()) ;
